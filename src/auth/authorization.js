@@ -35,7 +35,7 @@ async function apiFetch(endpoint, options = {}) {
 
 /** Check if this browser has a recognised device_id cookie */
 export async function checkDevice() {
-  return apiFetch("/auth/check-device");
+  return apiFetch("/auth/device-check");
 }
 
 /** Set the long-lived device_id cookie for a new device */
@@ -45,7 +45,7 @@ export async function registerDevice() {
 
 /** Full login: username + password + MFA code */
 export async function login(username, password, mfaCode) {
-  return apiFetch("/login", {
+  return apiFetch("/auth/login", {
     method: "POST",
     body: JSON.stringify({ username, password, mfaCode }),
   });
@@ -53,12 +53,12 @@ export async function login(username, password, mfaCode) {
 
 /** Restore session from existing auth_token cookie */
 export async function checkSession() {
-  return apiFetch("/me");
+  return apiFetch("/auth/me");
 }
 
 /** Clear the auth_token cookie server-side */
 export async function logout() {
-  return apiFetch("/logout", { method: "POST" });
+  return apiFetch("/auth/logout", { method: "POST" });
 }
 
 /** Fetch data for the current user's role dashboard */
