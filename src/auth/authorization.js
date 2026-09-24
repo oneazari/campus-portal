@@ -123,4 +123,4 @@ export function getRoleLabel(role = "") {
     FACULTY: "Faculty",
     ADMIN:   "Administrator",
   }[normaliseRole(role)] || "User";
-}x
+}
