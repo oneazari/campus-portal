@@ -16,7 +16,7 @@
 
 // ── 1. API CLIENT ────────────────────────────────────────────
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://campus-portal-backend-m59f.onrender.com/";
 
 async function apiFetch(endpoint, options = {}) {
   const res = await fetch(`${API_BASE}${endpoint}`, {
@@ -123,4 +123,4 @@ export function getRoleLabel(role = "") {
     FACULTY: "Faculty",
     ADMIN:   "Administrator",
   }[normaliseRole(role)] || "User";
-}
+}x
