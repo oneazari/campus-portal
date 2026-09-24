@@ -16,7 +16,7 @@
 
 // ── 1. API CLIENT ────────────────────────────────────────────
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://campus-portal-backend-m59f.onrender.com/";
+const API_BASE = import.meta.env.VITE_API_URL || "https://campus-portal-backend-m59f.onrender.com/api";
 
 async function apiFetch(endpoint, options = {}) {
   const res = await fetch(`${API_BASE}${endpoint}`, {
