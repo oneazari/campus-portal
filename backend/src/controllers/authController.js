@@ -35,7 +35,7 @@ exports.registerDevice = (req, res) => {
   res.cookie('device_id', deviceId, {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: 'lax',
+    sameSite: IS_PROD ? 'none' : 'lax',
     maxAge: 365 * 24 * 60 * 60 * 1000 // 1 year
   });
 
@@ -86,7 +86,7 @@ exports.login = async (req, res) => {
     res.cookie('device_id', deviceId, {
       httpOnly: true,
       secure: IS_PROD,
-      sameSite: 'lax',
+      sameSite: IS_PROD ? 'none' : 'lax',
       maxAge: 365 * 24 * 60 * 60 * 1000
     });
   }
@@ -108,7 +108,7 @@ exports.login = async (req, res) => {
   res.cookie('auth_token', token, {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: 'lax',
+    sameSite: IS_PROD ? 'none' : 'lax',
     maxAge: 8 * 60 * 60 * 1000
   });
 
@@ -147,7 +147,7 @@ exports.logout = (req, res) => {
   res.clearCookie('auth_token', {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: 'lax'
+    sameSite: IS_PROD ? 'none' : 'lax'
   });
   return res.json({ message: 'Logged out successfully' });
 };

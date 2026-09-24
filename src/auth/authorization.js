@@ -16,7 +16,7 @@
 
 // ── 1. API CLIENT ────────────────────────────────────────────
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://campus-portal-backend-m59f.onrender.com/api";
+const API_BASE = (import.meta.env.VITE_API_URL || "https://campus-portal-backend-m59f.onrender.com").replace(/\/$/, "");
 
 async function apiFetch(endpoint, options = {}) {
   const res = await fetch(`${API_BASE}${endpoint}`, {
@@ -35,7 +35,7 @@ async function apiFetch(endpoint, options = {}) {
 
 /** Check if this browser has a recognised device_id cookie */
 export async function checkDevice() {
-  return apiFetch("/auth/device-check");
+  return apiFetch("/auth/check-device");
 }
 
 /** Set the long-lived device_id cookie for a new device */
@@ -45,7 +45,7 @@ export async function registerDevice() {
 
 /** Full login: username + password + MFA code */
 export async function login(username, password, mfaCode) {
-  return apiFetch("/auth/login", {
+  return apiFetch("/login", {
     method: "POST",
     body: JSON.stringify({ username, password, mfaCode }),
   });
