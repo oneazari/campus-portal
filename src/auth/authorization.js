@@ -33,21 +33,17 @@ async function apiFetch(endpoint, options = {}) {
   return res.json();
 }
 
-/** Check if this browser has a recognised device_id cookie */
-export async function checkDevice() {
-  return apiFetch("/auth/check-device");
-}
+/** Full login: username + password + MFA code + device coordinates */
+export async function login(username, password, mfaCode, coordinates = {}) {
+  const { latitude, longitude } = coordinates;
 
-/** Set the long-lived device_id cookie for a new device */
-export async function registerDevice() {
-  return apiFetch("/auth/register-device", { method: "POST" });
-}
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error("Valid device location is required to sign in.");
+  }
 
-/** Full login: username + password + MFA code */
-export async function login(username, password, mfaCode) {
   return apiFetch("/login", {
     method: "POST",
-    body: JSON.stringify({ username, password, mfaCode }),
+    body: JSON.stringify({ username, password, mfaCode, latitude, longitude }),
   });
 }
 

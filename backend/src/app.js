@@ -15,10 +15,6 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors({ origin: FRONTEND_ORIGIN, credentials: true }));
 
-// Device check & registration routes
-app.get('/auth/check-device', authController.checkDevice);
-app.post('/auth/register-device', authController.registerDevice);
-
 // Authentication routes
 app.post('/login', authController.login);
 app.post('/logout', authController.logout);

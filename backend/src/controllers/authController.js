@@ -1,64 +1,27 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
-const { findUserByIdentifier, findUserById } = require('../utils/db');
-const { getLocationFromIp } = require('../services/locationService');
+const { findUserByIdentifier, findUserById, findUserByDeviceId } = require('../utils/db');
+const { getLocationFromCoordinates } = require('../services/locationService');
 const { JWT_SECRET, IS_PROD } = require('../config/env');
 
 /**
- * Checks if the request comes from a recognized device cookie.
- */
-exports.checkDevice = (req, res) => {
-  const deviceId = req.cookies.device_id;
-  
-  if (!deviceId) {
-    return res.json({ 
-      recognized: false, 
-      showLoginForm: false,
-      message: 'Unrecognized device. Registration/MFA authorization required.' 
-    });
-  }
-
-  return res.json({ 
-    recognized: true, 
-    showLoginForm: true,
-    deviceId 
-  });
-};
-
-/**
- * Registers a new device ID cookie for unrecognized machines.
- */
-exports.registerDevice = (req, res) => {
-  let deviceId = req.cookies.device_id || uuidv4();
-
-  res.cookie('device_id', deviceId, {
-    httpOnly: true,
-    secure: IS_PROD,
-    sameSite: IS_PROD ? 'none' : 'lax',
-    maxAge: 365 * 24 * 60 * 60 * 1000 // 1 year
-  });
-
-  return res.json({ message: 'Device introduced successfully', deviceId });
-};
-
-/**
- * Login with Credentials + MFA Code + Kerala IP Location Enforcement + Cookie JWT
+ * Login with Credentials + MFA Code + GPS Location Enforcement + Cookie JWT
  */
 exports.login = async (req, res) => {
-  const { username, password, mfaCode } = req.body;
+  const { username, password, mfaCode, latitude, longitude } = req.body;
 
-  if (!username || !password || !mfaCode) {
-    return res.status(400).json({ message: 'Username, password, and MFA code are required.' });
+  if (!username || !password || !mfaCode || latitude === undefined || longitude === undefined) {
+    return res.status(400).json({ message: 'Username, password, MFA code, and device location are required.' });
   }
 
-  // 1. IP Address & Geolocation Check (Kerala Only)
+  // 1. Device GPS location check (Kerala only)
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  const locationData = getLocationFromIp(clientIp);
+  const locationData = getLocationFromCoordinates(Number(latitude), Number(longitude));
 
   if (!locationData.isAllowedLocation) {
     return res.status(403).json({
-      message: 'Access denied: Portal access is restricted to region Kerala only.',
+      message: 'Access denied: Device location is outside Kerala.',
       location: locationData
     });
   }
@@ -79,6 +42,12 @@ exports.login = async (req, res) => {
     return res.status(401).json({ message: 'Invalid MFA verification code' });
   }
 
+  if (['admin', 'faculty'].includes(user.role) && !user.isRegistered) {
+    return res.status(403).json({
+      message: 'This admin or faculty account is not registered.'
+    });
+  }
+
   // 4. Device Identification & Storage
   let deviceId = req.cookies.device_id;
   if (!deviceId) {
@@ -91,12 +60,17 @@ exports.login = async (req, res) => {
     });
   }
 
+  const registeredDeviceOwner = findUserByDeviceId(deviceId);
+  if (registeredDeviceOwner && registeredDeviceOwner.id !== user.id) {
+    return res.status(403).json({ message: 'This device is registered to another user.' });
+  }
+
   if (!user.devices.includes(deviceId)) {
     user.devices.push(deviceId);
   }
 
   user.lastIp = clientIp;
-  user.lastLocation = locationData;
+  user.lastLocation = { ...locationData, ip: clientIp };
 
   // 5. Issue JWT Cookie
   const token = jwt.sign(

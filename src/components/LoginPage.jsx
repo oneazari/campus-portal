@@ -1,67 +1,41 @@
-import React, { useState, useEffect } from "react";
-import { Shield, Lock, User, KeyRound, Monitor, AlertCircle, CheckCircle } from "lucide-react";
-import { checkDevice, registerDevice, login } from "../auth/authorization";
+import React, { useState } from "react";
+import { Shield, Lock, User, KeyRound, AlertCircle, CheckCircle } from "lucide-react";
+import { login } from "../auth/authorization";
 
 export default function LoginPage({ onLoginSuccess }) {
-  const [deviceState, setDeviceState] = useState({ loading: true, recognized: false, message: "" });
   const [form, setForm]               = useState({ username: "", password: "", mfaCode: "" });
   const [error, setError]             = useState("");
   const [submitting, setSubmitting]   = useState(false);
-
-  useEffect(() => { verifyDevice(); }, []);
-
-  async function verifyDevice() {
-    setDeviceState({ loading: true, recognized: false, message: "" });
-    try {
-      const res = await checkDevice();
-      setDeviceState({ loading: false, recognized: res.recognized, message: res.message || "" });
-    } catch {
-      setDeviceState({ loading: false, recognized: false, message: "Backend unreachable. Is the server running?" });
-    }
-  }
-
-  async function handleRegisterDevice() {
-    setSubmitting(true);
-    setError("");
-    try {
-      await registerDevice();
-      await verifyDevice();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setSubmitting(true);
     try {
-      const res = await login(form.username, form.password, form.mfaCode);
+      if (!navigator.geolocation) {
+        throw new Error("Location access is required to sign in.");
+      }
+
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, () => {
+          reject(new Error("Could not determine your device location. Please allow location access and try again."));
+        }, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      });
+
+      const res = await login(form.username, form.password, form.mfaCode, {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
       onLoginSuccess?.(res.user);
     } catch (err) {
       setError(err.message);
     } finally {
       setSubmitting(false);
     }
-  }
-
-  // ── Loading ──
-  if (deviceState.loading) {
-    return (
-      <div className="login-shell">
-        <div className="login-card">
-          <div className="login-brand">
-            <div className="crest" style={{ margin: "0 auto 14px", width: 52, height: 52, fontSize: 28 }}>I</div>
-            <div className="brand-name" style={{ color: "var(--navy)", textAlign: "center" }}>INSTITUTE OF TECHNOLOGY</div>
-          </div>
-          <p style={{ textAlign: "center", color: "var(--muted)", fontSize: 12, marginTop: 18 }}>
-            Verifying device credentials…
-          </p>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -83,28 +57,9 @@ export default function LoginPage({ onLoginSuccess }) {
           </div>
         )}
 
-        {/* Unrecognised device */}
-        {!deviceState.recognized ? (
-          <div>
-            <div className="login-alert login-alert--warn">
-              <Monitor size={14} /> Unrecognised Device
-            </div>
-            <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.7, margin: "12px 0 18px" }}>
-              {deviceState.message || "This browser is not registered. Register it below before signing in."}
-            </p>
-            <button
-              className="login-btn"
-              onClick={handleRegisterDevice}
-              disabled={submitting}
-            >
-              {submitting ? "Registering…" : "Register This Device"}
-            </button>
-          </div>
-        ) : (
-          /* Recognised device — full login form */
-          <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
             <div className="login-alert login-alert--ok">
-              <CheckCircle size={14} /> Device verified
+              <CheckCircle size={14} /> Login verifies this device before trusting it
             </div>
 
             <div className="login-field">
@@ -147,8 +102,7 @@ export default function LoginPage({ onLoginSuccess }) {
             <button type="submit" className="login-btn" disabled={submitting}>
               {submitting ? "Authenticating…" : <><Shield size={14} /> Sign In</>}
             </button>
-          </form>
-        )}
+        </form>
 
         <p style={{ textAlign: "center", fontSize: 10, color: "#a0adb5", marginTop: 20 }}>
           Access restricted to authorised personnel · Kerala region only
